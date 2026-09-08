@@ -2,13 +2,22 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { runSimulation, type SimulationInput } from '@/lib/simulator';
 
+type ScenarioRow = {
+  generation_profile: number[];
+  demand_profile: number[];
+  battery_capacity_kwh: number;
+  initial_soc_kwh: number;
+  charge_efficiency: number;
+  discharge_efficiency: number;
+};
+
 async function getAuthedClient() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   return { supabase, user };
 }
 
-function toInput(row: any): SimulationInput {
+function toInput(row: ScenarioRow): SimulationInput {
   return {
     generationProfile: row.generation_profile,
     demandProfile: row.demand_profile,
@@ -36,7 +45,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const body = await request.json();
     const { data: existing, error: existingError } = await supabase.from('scenarios').select('*').eq('id', id).single();
     if (existingError || !existing) return NextResponse.json({ error: 'Scenario not found' }, { status: 404 });
-
     const input: SimulationInput = {
       generationProfile: body.generationProfile ?? existing.generation_profile,
       demandProfile: body.demandProfile ?? existing.demand_profile,
@@ -46,7 +54,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       dischargeEfficiency: body.dischargeEfficiency ?? existing.discharge_efficiency,
     };
     runSimulation(input);
-
     const updates: Record<string, unknown> = {
       generation_profile: input.generationProfile,
       demand_profile: input.demandProfile,
@@ -57,9 +64,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       updated_at: new Date().toISOString(),
     };
     if (body.name !== undefined) {
-      if (typeof body.name !== 'string' || !body.name.trim() || body.name.trim().length > 120) {
-        return NextResponse.json({ error: 'Scenario name must be 1–120 characters' }, { status: 400 });
-      }
+      if (typeof body.name !== 'string' || !body.name.trim() || body.name.trim().length > 120) return NextResponse.json({ error: 'Scenario name must be 1–120 characters' }, { status: 400 });
       updates.name = body.name.trim();
     }
     const { data, error } = await supabase.from('scenarios').update(updates).eq('id', id).select('*').single();
@@ -79,19 +84,20 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
   return new NextResponse(null, { status: 204 });
 }
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { supabase, user } = await getAuthedClient();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
   try {
     const { data: scenario, error } = await supabase.from('scenarios').select('*').eq('id', id).single();
     if (error || !scenario) return NextResponse.json({ error: 'Scenario not found' }, { status: 404 });
-    const result = runSimulation(toInput(scenario));
+    const input = toInput(scenario);
+    const result = runSimulation(input);
     const { data: run, error: insertError } = await supabase.from('simulation_runs').insert({
       scenario_id: id,
       status: 'completed',
       simulator_version: 'phase-1-ts-1.0.0',
-      input_snapshot: toInput(scenario),
+      input_snapshot: input,
       result_snapshot: result,
       completed_at: new Date().toISOString(),
     }).select('id, created_at, completed_at').single();
