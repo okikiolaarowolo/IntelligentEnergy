@@ -31,13 +31,13 @@ create policy "api keys owner access" on public.api_keys
   for all using (
     exists (
       select 1 from public.projects p
-      where p.id = api_keys.project_id and p.user_id = auth.uid()
+      where p.id = api_keys.project_id and p.owner_user_id = auth.uid()
     )
   )
   with check (
     exists (
       select 1 from public.projects p
-      where p.id = api_keys.project_id and p.user_id = auth.uid()
+      where p.id = api_keys.project_id and p.owner_user_id = auth.uid()
     )
   );
 
@@ -46,7 +46,7 @@ create policy "api usage owner read" on public.api_usage
   for select using (
     exists (
       select 1 from public.projects p
-      where p.id = api_usage.project_id and p.user_id = auth.uid()
+      where p.id = api_usage.project_id and p.owner_user_id = auth.uid()
     )
   );
 
@@ -55,6 +55,6 @@ create policy "api usage owner insert" on public.api_usage
   for insert with check (
     exists (
       select 1 from public.projects p
-      where p.id = api_usage.project_id and p.user_id = auth.uid()
+      where p.id = api_usage.project_id and p.owner_user_id = auth.uid()
     )
   );
