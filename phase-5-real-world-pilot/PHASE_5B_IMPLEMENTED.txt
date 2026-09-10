@@ -1,0 +1,1 @@
+Phase 5B implemented: pilot baseline versus constrained battery optimization, explicit assumptions, persisted evaluations, evaluation dashboard, API, tests, and RLS migration. Historical-profile optimization is explicitly not a forecast backtest.

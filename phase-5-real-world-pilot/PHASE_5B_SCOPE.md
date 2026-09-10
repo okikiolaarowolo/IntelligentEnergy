@@ -1,0 +1,3 @@
+# Phase 5B scope
+
+The evaluation compares the Phase 5A baseline against constrained battery optimization using the same historical profile. Results are explicitly labeled as a historical-profile feasibility study, not a forecast backtest or guaranteed financial saving. Battery, efficiency, tariff, curtailment, and throughput assumptions are persisted with each evaluation. No hardware or inverter control is included.
