@@ -35,22 +35,17 @@ export async function authenticateApiKey(request: Request) {
   if (error || !key) return null;
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count } = await supabase
-    .from('api_usage')
-    .select('id', { count: 'exact', head: true })
-    .eq('api_key_id', key.id)
-    .gte('created_at', since);
+  const [{ count }, { data: oldestUsage }] = await Promise.all([
+    supabase.from('api_usage').select('id', { count: 'exact', head: true }).eq('api_key_id', key.id).gte('created_at', since),
+    supabase.from('api_usage').select('created_at').eq('api_key_id', key.id).gte('created_at', since).order('created_at', { ascending: true }).limit(1).maybeSingle(),
+  ]);
   const used = count ?? 0;
-  if (used >= DAILY_LIMIT) {
-    return { ...key, rateLimited: true, remaining: 0, resetAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() };
-  }
+  const resetAt = oldestUsage?.created_at
+    ? new Date(new Date(oldestUsage.created_at).getTime() + 24 * 60 * 60 * 1000).toISOString()
+    : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-  return {
-    ...key,
-    rateLimited: false,
-    remaining: Math.max(0, DAILY_LIMIT - used - 1),
-    resetAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-  };
+  if (used >= DAILY_LIMIT) return { ...key, rateLimited: true, remaining: 0, resetAt };
+  return { ...key, rateLimited: false, remaining: Math.max(0, DAILY_LIMIT - used - 1), resetAt };
 }
 
 export async function recordApiUsage(apiKeyId: string, projectId: string, endpoint: string, statusCode: number) {
