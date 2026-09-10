@@ -28,5 +28,3 @@ create policy "pilot evaluations owner insert"
     select 1 from public.projects p
     where p.id = pilot_evaluations.project_id and p.owner_user_id = auth.uid()
   ));
-
-after delete? -- placeholder removed by migration review
