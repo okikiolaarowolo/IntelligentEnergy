@@ -119,7 +119,7 @@ export default function Dashboard() {
   }
 
   return <>
-    <nav className="nav"><strong>IntelligentEnergy</strong><div className="actions"><button onClick={() => router.push('/dashboard/prediction')}>Prediction Lab</button><button onClick={() => router.push('/dashboard/optimization')}>Optimization Lab</button><button onClick={() => router.push('/dashboard/platform')}>Developer Platform</button><button onClick={signOut}>Sign out</button></div></nav>
+    <nav className="nav"><strong>IntelligentEnergy</strong><div className="actions"><button onClick={() => router.push('/dashboard/pilot')}>Real-World Pilot</button><button onClick={() => router.push('/dashboard/prediction')}>Prediction Lab</button><button onClick={() => router.push('/dashboard/optimization')}>Optimization Lab</button><button onClick={() => router.push('/dashboard/platform')}>Developer Platform</button><button onClick={signOut}>Sign out</button></div></nav>
     <main className="container">
       <header><h1>Energy Dashboard</h1><p>Build scenarios, run the deterministic energy simulator, and inspect your results.</p></header>
       {error && <div className="error" role="alert">{error}</div>}
