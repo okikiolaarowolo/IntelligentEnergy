@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       .from('projects')
       .select('id')
       .eq('id', projectId)
-      .eq('user_id', user.id)
+      .eq('owner_user_id', user.id)
       .maybeSingle();
     if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
 
