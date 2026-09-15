@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateEnergyDecisions } from '@/lib/decision-engine';
+import type { OptimizationResult } from '@/lib/optimizer';
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -32,13 +33,13 @@ export async function POST(request: Request) {
     if (runError) return NextResponse.json({ error: runError.message }, { status: 400 });
     if (!run) return NextResponse.json({ error: 'Optimization run not found' }, { status: 404 });
 
-    const snapshot = run.result_snapshot as { steps?: Array<{ demandKwh?: number; generationKwh?: number }>; totals?: unknown };
+    const snapshot = run.result_snapshot as OptimizationResult;
     const input = run.input_snapshot as { demandForecastKwh?: number[]; generationForecastKwh?: number[] };
-    const demand = Array.isArray(input?.demandForecastKwh) ? input.demandForecastKwh : (snapshot.steps ?? []).map((s) => Number(s.demandKwh));
-    const generation = Array.isArray(input?.generationForecastKwh) ? input.generationForecastKwh : (snapshot.steps ?? []).map((s) => Number(s.generationKwh));
+    const demand = Array.isArray(input?.demandForecastKwh) ? input.demandForecastKwh : (snapshot?.steps ?? []).map((s) => s.demandKwh);
+    const generation = Array.isArray(input?.generationForecastKwh) ? input.generationForecastKwh : (snapshot?.steps ?? []).map((s) => s.generationKwh);
     if (!snapshot?.steps || demand.length !== generation.length || demand.length !== snapshot.steps.length) return NextResponse.json({ error: 'Optimization run does not contain a usable forecast snapshot' }, { status: 400 });
 
-    const result = generateEnergyDecisions({ demand, generation, optimization: snapshot as never });
+    const result = generateEnergyDecisions({ forecastDemandKwh: demand, forecastGenerationKwh: generation, optimization: snapshot });
     const { data: saved, error: saveError } = await supabase.from('energy_decisions').insert({ project_id: projectId, optimization_run_id: optimizationRunId, model_version: result.modelVersion, summary: result.summary, confidence: result.confidence, recommendations: result.recommendations, limitations: result.limitations }).select('id, project_id, optimization_run_id, model_version, summary, confidence, recommendations, limitations, created_at').single();
     if (saveError) return NextResponse.json({ error: saveError.message }, { status: 400 });
     return NextResponse.json({ decision: saved }, { status: 201 });
