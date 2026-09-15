@@ -73,17 +73,18 @@ export function evaluatePilot(input: PilotEvaluationInput, baseline: PilotBaseli
     terminalSocTargetKwh: input.initialSocKwh,
   });
 
+  const optimizedTotals = optimized.totals;
   const baselineCost = baseline.gridImportKwh * input.gridImportCostPerKwh + baseline.curtailedKwh * input.curtailmentCostPerKwh;
-  const optimizedCost = optimized.gridImportKwh * input.gridImportCostPerKwh + optimized.curtailedKwh * input.curtailmentCostPerKwh + (optimized.batteryChargeInputKwh + optimized.batteryDischargeDeliveredKwh) * (input.batteryThroughputCostPerKwh ?? 0.01);
-  const gridReduction = Math.max(0, baseline.gridImportKwh - optimized.gridImportKwh);
-  const curtailmentReduction = Math.max(0, baseline.curtailedKwh - optimized.curtailedKwh);
+  const optimizedCost = optimizedTotals.gridImportKwh * input.gridImportCostPerKwh + optimizedTotals.curtailedKwh * input.curtailmentCostPerKwh + (optimizedTotals.batteryChargeInputKwh + optimizedTotals.batteryDischargeDeliveredKwh) * (input.batteryThroughputCostPerKwh ?? 0.01);
+  const gridReduction = Math.max(0, baseline.gridImportKwh - optimizedTotals.gridImportKwh);
+  const curtailmentReduction = Math.max(0, baseline.curtailedKwh - optimizedTotals.curtailedKwh);
   const costDifference = baselineCost - optimizedCost;
-  const renewableUtilization = optimized.generationKwh > 0 ? ((optimized.generationKwh - optimized.curtailedKwh) / optimized.generationKwh) * 100 : 100;
+  const renewableUtilization = optimizedTotals.generationKwh > 0 ? ((optimizedTotals.generationKwh - optimizedTotals.curtailedKwh) / optimizedTotals.generationKwh) * 100 : 100;
 
   return {
     modelVersion: optimized.modelVersion,
     baseline,
-    optimized,
+    optimized: optimizedTotals,
     comparison: {
       gridImportReductionKwh: gridReduction,
       gridImportReductionPercent: baseline.gridImportKwh > 0 ? (gridReduction / baseline.gridImportKwh) * 100 : 0,
@@ -94,8 +95,8 @@ export function evaluatePilot(input: PilotEvaluationInput, baseline: PilotBaseli
       estimatedOptimizedCost: optimizedCost,
       estimatedCostDifference: costDifference,
       estimatedCostSavingsPercent: baselineCost > 0 ? (costDifference / baselineCost) * 100 : 0,
-      batteryDischargeDeliveredKwh: optimized.batteryDischargeDeliveredKwh,
-      batteryChargeInputKwh: optimized.batteryChargeInputKwh,
+      batteryDischargeDeliveredKwh: optimizedTotals.batteryDischargeDeliveredKwh,
+      batteryChargeInputKwh: optimizedTotals.batteryChargeInputKwh,
     },
     assumptions: {
       batteryCapacityKwh: input.batteryCapacityKwh,
