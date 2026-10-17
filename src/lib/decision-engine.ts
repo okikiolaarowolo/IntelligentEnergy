@@ -51,6 +51,6 @@ export function generateEnergyDecisions(input: DecisionEngineInput): DecisionRes
   const limitations = ['Recommendations are advisory only; IntelligentEnergy does not directly control hardware or the electrical grid.', 'Recommendations depend on the supplied forecast and optimization assumptions; real conditions can differ.'];
   if (quality !== undefined && quality < 80) limitations.push(`Data-quality score is ${quality.toFixed(0)}/100; improve input data before relying on recommendations.`);
   limitations.push(...(input.dataQuality?.warnings ?? []).slice(0, 3));
-  let confidence: DecisionResult['confidence'] = quality !== undefined && quality < 50 ? 'low' : demand.length < 6 || (quality !== undefined && quality < 80) ? 'medium' : 'high';
+  const confidence: DecisionResult['confidence'] = quality !== undefined && quality < 50 ? 'low' : demand.length < 6 || (quality !== undefined && quality < 80) ? 'medium' : 'high';
   return { modelVersion: 'decision-v1', summary: grid > 0 ? `Prioritize renewable surplus for storage and reserve battery energy for forecast shortfalls; ${grid.toFixed(2)} kWh of grid import remains in the optimized plan.` : 'The optimized plan covers the forecast without grid imports; preserve renewable utilization and avoid unnecessary battery cycling.', recommendations, confidence, limitations };
 }
