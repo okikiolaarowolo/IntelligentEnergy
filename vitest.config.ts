@@ -1,2 +1,13 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
-export default defineConfig({ test: { environment: 'node' } });
+
+const srcDirectory = fileURLToPath(new URL('./src', import.meta.url));
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      '@': srcDirectory,
+    },
+  },
+  test: { environment: 'node' },
+});
