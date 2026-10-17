@@ -21,6 +21,7 @@ IntelligentEnergy is an energy-management SaaS prototype that progresses from de
 - Deterministic forecasting (`ar-ridge-v1`) with held-out evaluation and naive baseline comparison
 - Deterministic battery optimization (`dp-storage-v1`)
 - Real-world CSV pilot data import and quality checks
+- Non-blocking pilot data-quality warnings for long zero-reading streaks and potential IQR outliers
 - Historical-profile pilot evaluation with explicit assumptions and limitations
 - Project-scoped developer API keys, usage auditing, and rolling rate limits
 - Phase 7 explainable decision engine (`decision-v1`)
