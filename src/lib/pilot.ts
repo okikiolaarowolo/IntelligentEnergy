@@ -73,6 +73,44 @@ function parseNonNegative(value: string, label: string, rowNumber: number): numb
   return parsed;
 }
 
+
+function qualityWarnings(observations: PilotObservation[]): string[] {
+  const warnings: string[] = [];
+  const zeroRunWarning = (key: 'demandKwh' | 'generationKwh', label: string) => {
+    let run = 0;
+    for (const row of observations) {
+      run = row[key] === 0 ? run + 1 : 0;
+      if (run >= 3) {
+        warnings.push(`Three or more consecutive zero readings were found for ${label}; confirm these are genuine readings rather than missing meter data.`);
+        break;
+      }
+    }
+  };
+
+  zeroRunWarning('demandKwh', 'demand');
+  zeroRunWarning('generationKwh', 'generation');
+
+  const outlierWarning = (key: 'demandKwh' | 'generationKwh', label: string) => {
+    if (observations.length < 8) return;
+    const values = observations.map((row) => row[key]).sort((a, b) => a - b);
+    const quantile = (p: number) => values[Math.floor((values.length - 1) * p)];
+    const q1 = quantile(0.25);
+    const q3 = quantile(0.75);
+    const iqr = q3 - q1;
+    if (iqr === 0) return;
+    const lower = q1 - 1.5 * iqr;
+    const upper = q3 + 1.5 * iqr;
+    const count = values.filter((value) => value < lower || value > upper).length;
+    if (count > 0) {
+      warnings.push(`${count} potential ${label} outlier(s) found using the IQR rule; review them before interpreting forecasts or savings.`);
+    }
+  };
+
+  outlierWarning('demandKwh', 'demand');
+  outlierWarning('generationKwh', 'generation');
+  return warnings;
+}
+
 export function parsePilotCsv(text: string): ParsedPilotCsv {
   if (!text.trim()) throw new Error('CSV file is empty');
   const rows = parseCsvRows(text.replace(/^\uFEFF/, ''));
@@ -109,7 +147,7 @@ export function parsePilotCsv(text: string): ParsedPilotCsv {
   return {
     observations,
     intervalMinutes,
-    warnings: [],
+    warnings: qualityWarnings(observations),
   };
 }
 
