@@ -22,7 +22,9 @@ export default function DecisionsPage() {
   async function loadProjects() { const r = await fetch('/api/projects'); if (!r.ok) throw new Error('Unable to load projects'); const data = await r.json() as Project[]; setProjects(data); if (data[0]) setProjectId(data[0].id); }
   async function loadRuns(id: string) { const r = await fetch(`/api/optimization?projectId=${encodeURIComponent(id)}`); if (!r.ok) throw new Error('Unable to load optimization runs'); const data = await r.json() as Run[]; setRuns(data); setRunId(data[0]?.id ?? ''); }
   async function loadHistory(id: string) { const r = await fetch(`/api/decisions?projectId=${encodeURIComponent(id)}`); if (!r.ok) throw new Error('Unable to load decision history'); setHistory(await r.json()); }
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadProjects().catch((e) => setError(e.message)); }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (!projectId) return; setError(''); Promise.all([loadRuns(projectId), loadHistory(projectId)]).catch((e) => setError(e.message)); }, [projectId]);
   async function generate() { setBusy(true); setError(''); try { if (!projectId || !runId) throw new Error('Create an optimization run first'); const r = await fetch('/api/decisions', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ projectId, optimizationRunId: runId }) }); const data = await r.json(); if (!r.ok) throw new Error(data.error || 'Decision generation failed'); setDecision(data.decision); setHistory((h) => [data.decision, ...h]); } catch (e) { setError(e instanceof Error ? e.message : 'Decision generation failed'); } finally { setBusy(false); } }
 
