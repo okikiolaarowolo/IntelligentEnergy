@@ -25,6 +25,7 @@ export default function PlatformPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load().catch((e) => setError(e instanceof Error ? e.message : 'Unable to load platform data'));
   }, [load]);
 
