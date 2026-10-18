@@ -48,6 +48,10 @@ function assertProfile(values: number[], label: string) {
  * This is deterministic decision support, not a language model or hardware controller.
  */
 export function investigateEnergy(input: InvestigationInput): InvestigationReport {
+  if (!input || !input.optimization || !Array.isArray(input.optimization.steps) || !input.optimization.totals) {
+    throw new Error('A valid optimization result is required');
+  }
+
   const demand = input.forecastDemandKwh;
   const generation = input.forecastGenerationKwh;
   assertProfile(demand, 'forecastDemandKwh');
