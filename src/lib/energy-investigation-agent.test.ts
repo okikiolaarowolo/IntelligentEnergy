@@ -19,6 +19,7 @@ describe('energy investigation agent', () => {
     const result = investigateEnergy(scenario([5, 5, 5], [0, 1, 0]));
     expect(result.agentVersion).toBe('energy-investigator-v1');
     expect(result.status).toBe('action-needed');
+    expect(result.keyMetrics.optimizedGridImportKwh).toBeGreaterThan(0);
     expect(result.findings.some((finding) => finding.id === 'residual-grid-import')).toBe(true);
     expect(result.findings.every((finding) => finding.evidence.length > 0 && finding.recommendedNextStep.length > 0)).toBe(true);
   });
@@ -37,6 +38,26 @@ describe('energy investigation agent', () => {
     });
     expect(result.findings.some((finding) => finding.title === 'Input data needs review')).toBe(true);
     expect(result.findings.every((finding) => finding.confidence === 'low')).toBe(true);
+  });
+
+  it('reports no major issue for a clean zero-load scenario', () => {
+    const result = investigateEnergy({
+      ...scenario([0, 0, 0], [0, 0, 0]),
+      dataQuality: { qualityScore: 100, warnings: [] },
+    });
+    expect(result.status).toBe('no-major-issue-detected');
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0].id).toBe('no-major-issue');
+    expect(result.keyMetrics.optimizedGridImportKwh).toBe(0);
+    expect(result.keyMetrics.optimizedCurtailmentKwh).toBe(0);
+  });
+
+  it('does not flag a clean data-quality score without warnings', () => {
+    const result = investigateEnergy({
+      ...scenario([2, 2, 2], [2, 2, 2]),
+      dataQuality: { qualityScore: 100, warnings: [] },
+    });
+    expect(result.findings.some((finding) => finding.id.startsWith('data-quality-') || finding.id === 'low-data-quality-score')).toBe(false);
   });
 
   it('rejects mismatched forecast and optimization horizons', () => {
