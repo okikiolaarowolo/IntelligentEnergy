@@ -18,7 +18,7 @@ The existing application includes:
 - Energy Investigator prototype at `/dashboard/investigator`, with structured findings, evidence, recommendations, assumptions, and limitations
 - Unit tests for residual grid import, renewable surplus, peak demand, data-quality warnings, clean scenarios, and invalid inputs
 
-The Energy Investigator is currently a **deterministic, rule-based prototype**, not yet a connected LLM planning/tool-calling agent. The tool contracts and synthetic evaluation plan are documented under `docs/`. A connected agent loop, complete source-level Nigerian generator/fuel analysis, and end-to-end benchmark results remain future work.
+The dashboard now supports a deterministic rule-based investigation and an optional authenticated LLM tool-calling endpoint at `POST /api/energy-investigator/agent`. The endpoint requires a signed-in Supabase user and a server-side `AI_GATEWAY_API_KEY` (recommended) or `OPENAI_API_KEY`; optional settings are `AI_GATEWAY_BASE_URL` and `ENERGY_AGENT_MODEL`. The default model is `openai/gpt-4o-mini`. It runs a bounded tool-calling loop against deterministic optimizer/investigator outputs. The initial verifier checks that findings cite result IDs from the current run, but it is not yet a complete semantic or numeric audit of every natural-language claim. Complete source-level Nigerian generator/fuel analysis and end-to-end benchmark results remain future work.
 
 ## Competition MVP
 
@@ -40,6 +40,7 @@ The focused MVP story: a school or small business supplies a clearly labelled en
 1. Install dependencies with `npm install`.
 2. Configure Supabase and the environment variables in `.env.local`.
 3. Apply migrations in `supabase/migrations/` in order, including `007_phase7_decision_layer.sql`.
-4. Run `npm run dev`.
+4. To enable the AI-agent button, add `AI_GATEWAY_API_KEY` as a server-side deployment environment variable (never prefix it with `NEXT_PUBLIC_`). If needed, set `ENERGY_AGENT_MODEL` to a supported model.
+5. Run `npm run dev`.
 
 For the developer API, `SUPABASE_SERVICE_ROLE_KEY` must remain server-side and must never use a `NEXT_PUBLIC_` prefix.
