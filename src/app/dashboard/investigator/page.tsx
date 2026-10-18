@@ -6,7 +6,9 @@ import { investigateEnergy, type InvestigationReport } from '@/lib/energy-invest
 import { optimizeEnergy } from '@/lib/optimizer';
 
 function parseProfile(value: string, label: string): number[] {
-  const values = value.split(',').map((part) => Number(part.trim()));
+  const parts = value.split(',').map((part) => part.trim());
+  if (parts.some((part) => part.length === 0)) throw new Error(`${label} contains an empty time step.`);
+  const values = parts.map(Number);
   if (!values.length || values.some((number) => !Number.isFinite(number) || number < 0)) {
     throw new Error(`${label} must be comma-separated, finite, non-negative kWh values.`);
   }
