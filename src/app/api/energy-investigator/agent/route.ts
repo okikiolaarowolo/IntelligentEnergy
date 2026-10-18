@@ -126,7 +126,7 @@ export async function POST(request: Request) {
 
   const investigationInput: InvestigationInput = {
     forecastDemandKwh: demandForecastKwh,
-    forecastGenerationKwh,
+    forecastGenerationKwh: generationForecastKwh,
     optimization: optimization.data,
     dataQuality: { qualityScore: qualityScore as number | undefined, warnings },
   };
