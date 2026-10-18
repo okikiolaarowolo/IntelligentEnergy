@@ -31,8 +31,41 @@ export default function InvestigatorPage() {
   const [quality, setQuality] = useState('85');
   const [warnings, setWarnings] = useState('');
   const [report, setReport] = useState<InvestigationReport | null>(null);
+  const [agentReport, setAgentReport] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  async function runAgentInvestigation() {
+    setError('');
+    setAgentReport(null);
+    setBusy(true);
+    try {
+      const generationForecastKwh = parseProfile(generation, 'Generation profile');
+      const demandForecastKwh = parseProfile(demand, 'Demand profile');
+      if (generationForecastKwh.length !== demandForecastKwh.length) throw new Error('Generation and demand profiles must have the same number of steps.');
+      const batteryCapacityKwh = Number(capacity);
+      const initialSocKwh = Number(initialSoc);
+      const charge = Number(chargeEfficiency);
+      const discharge = Number(dischargeEfficiency);
+      const qualityScore = quality.trim() === '' ? undefined : Number(quality);
+      if (!Number.isFinite(batteryCapacityKwh) || batteryCapacityKwh < 0) throw new Error('Battery capacity must be non-negative.');
+      if (!Number.isFinite(initialSocKwh) || initialSocKwh < 0 || initialSocKwh > batteryCapacityKwh) throw new Error('Initial charge must be between zero and battery capacity.');
+      if (!Number.isFinite(charge) || charge <= 0 || charge > 1 || !Number.isFinite(discharge) || discharge <= 0 || discharge > 1) throw new Error('Efficiencies must be greater than 0 and at most 1.');
+      if (qualityScore !== undefined && (!Number.isFinite(qualityScore) || qualityScore < 0 || qualityScore > 100)) throw new Error('Data-quality score must be between 0 and 100.');
+      const response = await fetch('/api/energy-investigator/agent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ generationForecastKwh, demandForecastKwh, batteryCapacityKwh, initialSocKwh, chargeEfficiency: charge, dischargeEfficiency: discharge, qualityScore, warnings: warnings.split('\\n').map((item) => item.trim()).filter(Boolean).slice(0, 3) }),
+      });
+      const result: unknown = await response.json();
+      if (!response.ok) throw new Error(result && typeof result === 'object' && 'error' in result && typeof result.error === 'string' ? result.error : 'AI investigation failed.');
+      if (!result || typeof result !== 'object') throw new Error('The agent returned an invalid response.');
+      setAgentReport(result as Record<string, unknown>);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'AI investigation could not be completed.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function runInvestigation(event: FormEvent) {
     event.preventDefault();
@@ -120,9 +153,31 @@ export default function InvestigatorPage() {
             <label>Data warnings (optional; one per line)
               <textarea value={warnings} onChange={(event) => setWarnings(event.target.value)} rows={3} placeholder="Example: Some readings may be missing" />
             </label>
-            <button type="submit" disabled={busy}>{busy ? 'Investigating…' : 'Run investigation'}</button>
+            <div className="actions">
+              <button type="submit" disabled={busy}>{busy ? 'Working…' : 'Run rule-based investigation'}</button>
+              <button type="button" onClick={runAgentInvestigation} disabled={busy}>{busy ? 'Agent working…' : 'Run AI agent investigation'}</button>
+            </div>
           </form>
         </section>
+
+        {agentReport && <section className="card" aria-live="polite">
+          <h2>AI agent investigation</h2>
+          <p className="muted">LLM tool-calling mode · Advisory only · Review cited evidence before acting</p>
+          <p>{typeof agentReport.summary === 'string' ? agentReport.summary : 'Investigation completed.'}</p>
+          {agentReport.verifier && typeof agentReport.verifier === 'object' && <p><strong>Claim verification:</strong> {JSON.stringify(agentReport.verifier)}</p>}
+          {Array.isArray(agentReport.findings) && agentReport.findings.map((item, index) => item && typeof item === 'object' ? <article className="card" key={index}>
+            <p><strong>{'title' in item && typeof item.title === 'string' ? item.title : 'Finding'}</strong></p>
+            <p>{'explanation' in item && typeof item.explanation === 'string' ? item.explanation : ''}</p>
+            {'severity' in item && <p><strong>Severity:</strong> {String(item.severity)}</p>}
+            {'confidence' in item && <p><strong>Confidence:</strong> {String(item.confidence)}</p>}
+            {'toolResultIds' in item && <p className="muted"><strong>Evidence result IDs:</strong> {Array.isArray(item.toolResultIds) ? item.toolResultIds.join(', ') : 'None'}</p>}
+            {'nextStep' in item && <p><strong>Next step:</strong> {String(item.nextStep)}</p>}
+          </article> : null)}
+          {Array.isArray(agentReport.blockedClaims) && agentReport.blockedClaims.length > 0 && <><h3>Claims blocked by verifier</h3><ul>{agentReport.blockedClaims.map((item, index) => <li key={index}>{JSON.stringify(item)}</li>)}</ul></>}
+          {Array.isArray(agentReport.missingData) && agentReport.missingData.length > 0 && <><h3>Missing data</h3><ul>{agentReport.missingData.map((item, index) => <li key={index}>{String(item)}</li>)}</ul></>}
+          {Array.isArray(agentReport.limitations) && agentReport.limitations.length > 0 && <><h3>Limitations</h3><ul>{agentReport.limitations.map((item, index) => <li key={index}>{String(item)}</li>)}</ul></>}
+          {Array.isArray(agentReport.toolResults) && <details><summary>Tool result ledger</summary><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(agentReport.toolResults, null, 2)}</pre></details>}
+        </section>}
 
         {report && <>
           <section className="card" aria-live="polite">
