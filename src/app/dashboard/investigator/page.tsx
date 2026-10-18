@@ -164,7 +164,7 @@ export default function InvestigatorPage() {
           <h2>AI agent investigation</h2>
           <p className="muted">LLM tool-calling mode · Advisory only · Review cited evidence before acting</p>
           <p>{typeof agentReport.summary === 'string' ? agentReport.summary : 'Investigation completed.'}</p>
-          {agentReport.verifier && typeof agentReport.verifier === 'object' && <p><strong>Claim verification:</strong> {JSON.stringify(agentReport.verifier)}</p>}
+          {Boolean(agentReport.verifier) && typeof agentReport.verifier === 'object' && <p><strong>Claim verification:</strong> {JSON.stringify(agentReport.verifier)}</p>}
           {Array.isArray(agentReport.findings) && agentReport.findings.map((item, index) => item && typeof item === 'object' ? <article className="card" key={index}>
             <p><strong>{'title' in item && typeof item.title === 'string' ? item.title : 'Finding'}</strong></p>
             <p>{'explanation' in item && typeof item.explanation === 'string' ? item.explanation : ''}</p>
